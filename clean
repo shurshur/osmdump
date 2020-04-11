@@ -1,0 +1,27 @@
+#!/bin/bash
+set -e
+maxdays=5
+
+ts=$(date +'%s')
+td=$(date +'%Y%m%d' -d @$[$ts-$maxdays*24*60*60])
+l=$(readlink latest)
+echo Clean up to $td...
+
+for d in 202?????
+do
+  if [ -d $d ]
+  then
+    dt=$(basename $d)
+    if [[ "$dt" -lt $td ]]
+    then
+      if [ "$l" = "$dt" ]
+      then
+        echo "SKIP $d because it is latest"
+      else
+        echo -n "Clean $d... "
+        rm -rf $d
+        echo done
+      fi
+    fi
+  fi
+done

@@ -1,0 +1,34 @@
+#!/bin/bash
+set -e
+
+if [ -h latest ]
+then
+  echo Already initialized
+  exit
+fi
+
+today=$(date +'%Y%m%d')
+mkdir -p $today
+
+# generate local.osm.pbf - ~1.5h
+echo `date`: Generate local.osm
+time -p osmconvert planet-latest.osm.pbf --complex-ways -B=poly/local.poly -o=local.osm.pbf
+time -p osmupdate --day local.osm.pbf local_new.osm.pbf
+time -p osmconvert local_new.osm.pbf --complex-ways -B=poly/local.poly -o=$today/local.osm.pbf
+rm local.osm.pbf local_new.osm.pbf
+
+# split regions - ~7h
+for poly in poly/*.poly
+do
+ r=`basename $poly|sed s/.poly//`
+ echo `date`: Split region $r
+ if [ "$r" = local ]
+ then
+   continue
+ fi  
+ osmconvert $today/local.osm.pbf --complex-ways -B=$poly -o=$today/$r.osm.pbf
+done
+
+./indexgen $today
+ln -sfn $today latest
+echo `date`: All done.

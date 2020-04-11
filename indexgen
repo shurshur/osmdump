@@ -1,0 +1,40 @@
+#!/usr/bin/perl
+use strict;
+
+sub hrsz {
+  my ($sz)=@_;
+  my @suf=qw(б Кб Мб Гб Тб Пб Эб);
+  my $i=0;
+  while($sz>=1024) {
+    $sz/=1024;
+    $i++;
+  }
+  return sprintf("%.1lf%s",$sz,$suf[$i]);
+}
+
+open F,"<poly/index";
+my ($dir)=@ARGV;
+$dir="latest" unless defined $dir;
+open OUT,">$dir/index.html";
+open HEAD,"<index_head.html";
+print OUT while <HEAD>;
+close HEAD;
+print OUT "<table border=1 cellspacing=0>\n";
+print OUT "<tr><th>ISO3166</th><th>Регион</th><th>Timestamp</th><th>Размер</th></tr>\n";
+while(<F>) {
+  chomp;
+  my ($iso,$name)=split /\t/;
+  my @tmp=stat "$dir/$iso.osm.pbf";
+  my $size=$tmp[7];
+  if (defined $size) {
+    $size = hrsz $size;
+  } else {
+    $size = "???";
+  }
+  my $ts=`osmconvert --out-timestamp $dir/$iso.osm.pbf`;
+  print OUT "<tr><td>$iso</td><td><a href=./$iso.osm.pbf>$name</a></td><td>$ts</td><td align=right>$size</td></tr>\n";
+}
+print OUT "</table>";
+open TAIL,"<index_tail.html";
+print OUT while <TAIL>;
+close TAIL;

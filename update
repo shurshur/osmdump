@@ -1,0 +1,33 @@
+export LC_TIME=C
+set -e
+maxdays=20
+
+yesterday=$(readlink latest)
+ts=$(date +'%s')
+td=$(date +'%Y%m%d' -d @$[$ts-$maxdays*24*60*60])
+if [[ "$yesterday" -lt $td ]]
+then
+  echo PREV TOO OLD
+  exit
+fi
+today=$(date +'%Y%m%d')
+mkdir -p $today
+
+echo `date`: Run update from $yesterday to $today
+
+echo `date`: Clean temporary data...
+rm -rf osmupdate_temp/
+
+for poly in poly/*.poly
+do
+ r=`basename $poly|sed s/.poly//`
+ echo `date`: Update region $r
+ osmupdate --day --keep-tempfiles $yesterday/$r.osm.pbf ${r}_new.osm.pbf
+ osmconvert ${r}_new.osm.pbf --complex-ways -B=$poly -o=$today/$r.osm.pbf
+ rm -f ${r}_new.osm.pbf
+ chmod a+r $today/$r.osm.pbf
+done
+
+./indexgen $today
+ln -sfn $today latest
+echo `date`: All done.
